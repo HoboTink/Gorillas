@@ -289,7 +289,7 @@
 
             <div id="instructions">
                 <div class="info-line"><strong>Drag:</strong> Rotate camera</div>
-                <div class="info-line"><strong>Right-click drag:</strong> Tilt camera</div>
+                <div class="info-line"><strong>Shift + Drag:</strong> Tilt camera</div>
                 <div class="info-line"><strong>Scroll:</strong> Zoom in/out</div>
                 <div class="info-line"><strong>WASD:</strong> Pan camera</div>
                 <div class="info-line"><strong>Space:</strong> Reset camera</div>
@@ -548,16 +548,17 @@
                 document.addEventListener('mousedown', (e) => this.onMouseDown(e));
                 document.addEventListener('mousemove', (e) => this.onMouseMove(e));
                 document.addEventListener('mouseup', () => this.onMouseUp());
-                document.addEventListener('contextmenu', (e) => e.preventDefault()); // Prevent right-click menu
                 document.addEventListener('wheel', (e) => this.onScroll(e), { passive: false });
                 document.addEventListener('keydown', (e) => this.onKeyDown(e));
             }
 
             onMouseDown(e) {
                 if (e.button === 0) { // Left click
-                    this.cameraControl.isDragging = true;
-                } else if (e.button === 2) { // Right click
-                    this.cameraControl.isRightDragging = true;
+                    if (e.shiftKey) {
+                        this.cameraControl.isRightDragging = true; // Shift+drag for tilt
+                    } else {
+                        this.cameraControl.isDragging = true; // Normal drag for rotate
+                    }
                 }
                 this.cameraControl.previousMousePosition = { x: e.clientX, y: e.clientY };
             }
