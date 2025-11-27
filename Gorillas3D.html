@@ -442,7 +442,8 @@
                     metalness: 0.1
                 });
                 const building = new THREE.Mesh(geometry, material);
-                building.position.set(x, height / 2, 0);
+                // Buildings sit on the ground (y = 0), so position at height/2 above ground
+                building.position.set(x, height / 2 - 50, 0);
                 building.castShadow = true;
                 building.receiveShadow = true;
 
@@ -480,16 +481,18 @@
                 if (this.gorillas[1]) this.scene.remove(this.gorillas[1]);
                 if (this.gorillas[2]) this.scene.remove(this.gorillas[2]);
 
-                // Place gorillas on buildings
+                // Place gorillas on buildings (on top of them)
                 const p1Building = this.buildings[0];
                 const p2Building = this.buildings[this.buildings.length - 1];
 
                 this.gorillas[1] = this.createGorilla();
-                this.gorillas[1].position.set(p1Building.position.x, p1Building.position.y + 40, 0);
+                // Position gorilla on top of building
+                this.gorillas[1].position.set(p1Building.position.x, p1Building.position.y + (p1Building.geometry.parameters.height / 2) + 20, 0);
                 this.scene.add(this.gorillas[1]);
 
                 this.gorillas[2] = this.createGorilla();
-                this.gorillas[2].position.set(p2Building.position.x, p2Building.position.y + 40, 0);
+                // Position gorilla on top of building
+                this.gorillas[2].position.set(p2Building.position.x, p2Building.position.y + (p2Building.geometry.parameters.height / 2) + 20, 0);
                 this.scene.add(this.gorillas[2]);
             }
 
@@ -561,7 +564,8 @@
                 this.cameraControl.rotation.y += deltaX * 0.005;
                 this.cameraControl.rotation.x += deltaY * 0.005;
 
-                this.cameraControl.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.cameraControl.rotation.x));
+                // Allow full rotation from straight down (-π/2) to straight up (π/2)
+                this.cameraControl.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, this.cameraControl.rotation.x));
 
                 this.cameraControl.previousMousePosition = { x: e.clientX, y: e.clientY };
                 this.updateCameraPosition();
