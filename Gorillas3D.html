@@ -288,8 +288,9 @@
             </div>
 
             <div id="instructions">
-                <div class="info-line"><strong>Mouse:</strong> Rotate camera</div>
-                <div class="info-line"><strong>Scroll:</strong> Zoom camera</div>
+                <div class="info-line"><strong>Drag:</strong> Rotate camera</div>
+                <div class="info-line"><strong>Right-click drag:</strong> Tilt camera</div>
+                <div class="info-line"><strong>Scroll:</strong> Zoom in/out</div>
                 <div class="info-line"><strong>WASD:</strong> Pan camera</div>
                 <div class="info-line"><strong>Space:</strong> Reset camera</div>
             </div>
@@ -335,8 +336,9 @@
                 this.cameraControl = {
                     enabled: true,
                     isDragging: false,
+                    isRightDragging: false,
                     previousMousePosition: { x: 0, y: 0 },
-                    rotation: { x: 0, y: 0 },
+                    rotation: { x: 0, y: 0, z: 0 }, // z is tilt/roll
                     zoom: 150,
                     panX: 0,
                     panY: 0
@@ -546,26 +548,42 @@
                 document.addEventListener('mousedown', (e) => this.onMouseDown(e));
                 document.addEventListener('mousemove', (e) => this.onMouseMove(e));
                 document.addEventListener('mouseup', () => this.onMouseUp());
+                document.addEventListener('contextmenu', (e) => e.preventDefault()); // Prevent right-click menu
                 document.addEventListener('wheel', (e) => this.onScroll(e), { passive: false });
                 document.addEventListener('keydown', (e) => this.onKeyDown(e));
             }
 
             onMouseDown(e) {
-                this.cameraControl.isDragging = true;
+                if (e.button === 0) { // Left click
+                    this.cameraControl.isDragging = true;
+                } else if (e.button === 2) { // Right click
+                    this.cameraControl.isRightDragging = true;
+                }
                 this.cameraControl.previousMousePosition = { x: e.clientX, y: e.clientY };
             }
 
             onMouseMove(e) {
-                if (!this.cameraControl.isDragging || !this.cameraControl.enabled) return;
+                if (!this.cameraControl.enabled) return;
 
                 const deltaX = e.clientX - this.cameraControl.previousMousePosition.x;
                 const deltaY = e.clientY - this.cameraControl.previousMousePosition.y;
 
-                this.cameraControl.rotation.y += deltaX * 0.005;
-                this.cameraControl.rotation.x += deltaY * 0.005;
+                if (this.cameraControl.isDragging) {
+                    // Left click drag: rotate around (orbit)
+                    this.cameraControl.rotation.y += deltaX * 0.005;
+                    this.cameraControl.rotation.x += deltaY * 0.005;
 
-                // Allow full rotation from straight down (-π/2) to straight up (π/2)
-                this.cameraControl.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, this.cameraControl.rotation.x));
+                    // Allow full rotation from straight down to straight up
+                    this.cameraControl.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, this.cameraControl.rotation.x));
+                }
+
+                if (this.cameraControl.isRightDragging) {
+                    // Right click drag: tilt/roll the camera
+                    this.cameraControl.rotation.z += deltaX * 0.005;
+
+                    // Limit tilt to ±45 degrees
+                    this.cameraControl.rotation.z = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, this.cameraControl.rotation.z));
+                }
 
                 this.cameraControl.previousMousePosition = { x: e.clientX, y: e.clientY };
                 this.updateCameraPosition();
@@ -573,6 +591,7 @@
 
             onMouseUp() {
                 this.cameraControl.isDragging = false;
+                this.cameraControl.isRightDragging = false;
             }
 
             onScroll(e) {
@@ -604,11 +623,19 @@
                     y + this.cameraControl.panY + 40,
                     z
                 );
-                this.camera.lookAt(this.cameraControl.panX, this.cameraControl.panY + 20, 0);
+
+                // Look at target position
+                const targetPos = new THREE.Vector3(this.cameraControl.panX, this.cameraControl.panY + 20, 0);
+                this.camera.lookAt(targetPos);
+
+                // Apply tilt/roll rotation
+                if (this.cameraControl.rotation.z !== 0) {
+                    this.camera.rotateZ(this.cameraControl.rotation.z);
+                }
             }
 
             resetCamera() {
-                this.cameraControl.rotation = { x: -0.3, y: 0 };
+                this.cameraControl.rotation = { x: -0.3, y: 0, z: 0 };
                 this.cameraControl.zoom = 150;
                 this.cameraControl.panX = 0;
                 this.cameraControl.panY = 0;
