@@ -14,12 +14,14 @@ Choose between:
 
 ### 3D Version (Modern)
 - Full 3D rendering with Three.js and WebGL
-- Free-rotating camera with mouse and keyboard controls
+- Free-rotating camera with mouse and keyboard controls (optimized for trackpad)
 - Dynamic lighting system with shadows
 - Procedurally generated 3D cityscape
-- Physics-based banana trajectories
-- Particle explosion effects
+- **Realistic banana physics with spin/rotation**
+- **Enhanced particle explosion effects with screen shake**
+- **Banana trail particles during flight**
 - Modern UI with animations
+- **Glowing banana material for visibility**
 
 ### 2D Version (Classic)
 - Clean 2D canvas rendering
@@ -39,11 +41,12 @@ Choose between:
 
 ## Controls
 
-### 3D Version
-- **Mouse Drag**: Rotate camera
+### 3D Version (Trackpad Optimized)
+- **Drag**: Rotate camera
+- **Shift + Drag**: Tilt/roll camera
 - **Scroll Wheel**: Zoom in/out
 - **WASD Keys**: Pan camera
-- **Spacebar**: Reset camera
+- **Spacebar**: Reset camera to default view
 
 ### 2D Version
 - **Angle Input**: Set throw angle

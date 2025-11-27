@@ -126,16 +126,51 @@ Note: GitHub Personal Access Token with `repo` scope is configured. PAT with `wo
 - **Camera Rotation Limits**: Prevents gimbal lock and unnecessary computations
 - **No Build Process**: Files served directly - no minification, consider adding for production optimization
 
+## Recent Improvements (Latest Session)
+
+### Visual & Physics Enhancements (Commit: 51a4c4e)
+- **Banana physics**: Added realistic spin/rotation as banana flies
+- **Rotation drag**: Spinning slows over time for natural motion
+- **Screen shake**: Camera shakes on impact (200ms duration) for feedback
+- **Enhanced explosions**: 35+ colorful particles with realistic gravity and fade-out
+- **Banana trails**: Yellow particles follow banana path during flight
+- **Glowing banana**: Added emissive glow to banana material for visibility
+- **Better delta time**: Improved physics calculations for smoother feel
+
+### Trackpad Optimization (Commit: b6c9313)
+- Changed tilt control from right-click to **Shift + Drag** for MacBook trackpad compatibility
+- All controls now work seamlessly on trackpad
+
+### Camera & Positioning Fixes (Commits: 642c7f7, 1c3dd3b)
+- Fixed buildings floating in air - now sit on ground properly
+- Gorillas positioned correctly on building tops
+- Expanded camera rotation limits to allow looking straight down
+- Added tilt/roll control for full 3D perspective
+
+### Documentation (Commit: c4239b9)
+- Added comprehensive CLAUDE.md for future development sessions
+
 ## Future Enhancement Ideas
 
-- Add sound effects and background music
-- Implement difficulty levels (gravity, wind intensity)
+**High Priority (Next Session Ideas):**
+- Add sound effects (throw sound, explosion, hit/miss)
+- Implement difficulty levels (wind intensity, gravity variation)
+- Add visual trajectory preview before throwing
+- Implement power meter for throw visualization
+- Add more gorilla animations (throw pose, celebration)
+
+**Medium Priority:**
 - Add leaderboard/score tracking (localStorage)
 - Create mobile-optimized controls (touch gestures)
-- Add more 3D visual polish (skybox, better gorilla models, building textures)
-- Implement wind visualization (particle trails)
-- Add replay/replay mode functionality
+- Add more 3D visual polish (skybox, building textures, better materials)
+- Implement wind visualization (wind direction particles)
 - Create level/map variety with different city layouts
+
+**Lower Priority:**
+- Add replay mode functionality
+- Implement multiplayer (if hosting becomes available)
+- Add achievements/badges system
+- Create game modes (timed, endless, tournament)
 
 ## Browser Compatibility
 
