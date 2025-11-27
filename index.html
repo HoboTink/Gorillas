@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gorillas - Banana Toss Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 4rem;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .versions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .versions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .version-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .version-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .version-card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .badge.classic {
+            background: #FF9800;
+        }
+
+        .version-card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .features {
+            list-style: none;
+            margin-bottom: 25px;
+        }
+
+        .features li {
+            color: #555;
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 0.95rem;
+        }
+
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .version-card.classic .features li:before {
+            color: #FF9800;
+        }
+
+        .play-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+        }
+
+        .play-button:hover {
+            background: linear-gradient(135deg, #45a049, #3d8b40);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+            transform: scale(1.02);
+        }
+
+        .version-card.classic .play-button {
+            background: linear-gradient(135deg, #FF9800, #e68900);
+        }
+
+        .version-card.classic .play-button:hover {
+            background: linear-gradient(135deg, #e68900, #d97700);
+            box-shadow: 0 0 20px rgba(255, 152, 0, 0.6);
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0.8;
+        }
+
+        .footer p {
+            margin-bottom: 10px;
+        }
+
+        .github-link {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            transition: opacity 0.3s ease;
+        }
+
+        .github-link:hover {
+            opacity: 0.7;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🦍 GORILLAS</h1>
+            <p>Banana Toss Game - Pick Your Experience</p>
+        </div>
+
+        <div class="versions-grid">
+            <!-- 3D Version -->
+            <div class="version-card">
+                <span class="badge">Modern</span>
+                <h2>3D Edition</h2>
+                <p>Experience the classic Gorillas game in stunning 3D with free-rotating camera controls, dynamic lighting, and modern physics.</p>
+                <ul class="features">
+                    <li>Full 3D rendering with Three.js</li>
+                    <li>Free-rotating camera (mouse, scroll, WASD)</li>
+                    <li>Dynamic lighting and shadows</li>
+                    <li>Particle explosion effects</li>
+                    <li>Advanced physics simulation</li>
+                    <li>Modern UI with animations</li>
+                </ul>
+                <a href="Gorillas3D.html" class="play-button">Play 3D Version</a>
+            </div>
+
+            <!-- 2D Version -->
+            <div class="version-card classic">
+                <span class="badge classic">Classic</span>
+                <h2>2D Edition</h2>
+                <p>The original Gorillas experience with a clean 2D interface, simple controls, and retro aesthetics inspired by the MS-DOS classic.</p>
+                <ul class="features">
+                    <li>Classic 2D canvas rendering</li>
+                    <li>Simple angle and velocity controls</li>
+                    <li>Wind effects</li>
+                    <li>Building destruction</li>
+                    <li>Retro visual style</li>
+                    <li>Fast and responsive</li>
+                </ul>
+                <a href="Gorillas3DProject.html" class="play-button">Play 2D Version</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>How to Play: Set angle and power, then throw bananas at your opponent!</p>
+            <p>
+                <a href="https://github.com/HoboTink/Gorillas" class="github-link" target="_blank">→ View on GitHub</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
