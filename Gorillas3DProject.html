@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gorillas.js - Browser Edition</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        #game-container {
+            position: relative;
+            border: 2px solid #555;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+        canvas {
+            display: block;
+            background-color: #0000AA; /* Classic QBasic Blue Sky */
+        }
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none; /* Let clicks pass through to canvas */
+        }
+        .player-score {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        #controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: #222;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            flex-wrap: wrap;
+        }
+        input {
+            background: #333;
+            border: 1px solid #555;
+            color: #0f0;
+            padding: 5px;
+            width: 60px;
+            font-family: inherit;
+        }
+        button {
+            background: #00AA00;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+        }
+        button:hover { background: #00CC00; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #wind-display {
+            margin-top: 5px;
+            color: #FFFF55;
+        }
+        #message-area {
+            position: absolute;
+            top: 40%;
+            width: 100%;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px #000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>GORILLAS.JS</h1>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        <div id="ui-layer">
+            <div class="player-score" id="p1-score">Player 1: 0</div>
+            <div class="player-score" id="p2-score">Player 2: 0</div>
+        </div>
+        <div id="message-area">Player 1 Wins!</div>
+    </div>
+
+    <div id="wind-display">Wind: <span id="wind-arrow">&larr;</span> <span id="wind-value">0</span></div>
+
+    <div id="controls">
+        <span id="turn-indicator" style="color: #FF5555; font-weight: bold;">Player 1's Turn</span>
+        <label>Angle: <input type="number" id="angle" value="45" min="0" max="360"></label>
+        <label>Velocity: <input type="number" id="velocity" value="50" min="0" max="200"></label>
+        <button id="fire-btn" onclick="fireBanana()">THROW!</button>
+        <button onclick="resetGame()">New Game</button>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game State
+    let buildings = [];
+    let player1 = { x: 0, y: 0, width: 30, height: 30, color: '#FFD700', score: 0 };
+    let player2 = { x: 0, y: 0, width: 30, height: 30, color: '#FFD700', score: 0 };
+    let currentPlayer = 1;
+    let wind = 0; // Negative = Left, Positive = Right
+    let isAnimating = false;
+    let banana = null;
+
+    // Physics Constants
+    const GRAVITY = 9.8;
+
+    // Initialize
+    function init() {
+        generateCity();
+        placeGorillas();
+        randomizeWind();
+        updateUI();
+        draw();
+    }
+
+    function generateCity() {
+        buildings = [];
+        let currentX = 0;
+        while (currentX < canvas.width) {
+            let width = 60 + Math.random() * 60; // Building width between 60-120
+            let height = 50 + Math.random() * 300; // Height between 50-350
+
+            // Building colors (classic CGA/EGA palette styles)
+            const colors = ['#AA0000', '#00AAAA', '#AAAAAA'];
+            let color = colors[Math.floor(Math.random() * colors.length)];
+
+            if (currentX + width > canvas.width) {
+                width = canvas.width - currentX;
+            }
+
+            buildings.push({ x: currentX, y: canvas.height - height, w: width, h: height, c: color });
+            currentX += width;
+        }
+    }
+
+    function placeGorillas() {
+        // Player 1 on the left side (first few buildings)
+        let b1Index = Math.floor(Math.random() * 3);
+        let b1 = buildings[b1Index];
+        player1.x = b1.x + b1.w / 2 - player1.width / 2;
+        player1.y = b1.y - player1.height;
+
+        // Player 2 on the right side (last few buildings)
+        let b2Index = buildings.length - 1 - Math.floor(Math.random() * 3);
+        let b2 = buildings[b2Index];
+        player2.x = b2.x + b2.w / 2 - player2.width / 2;
+        player2.y = b2.y - player2.height;
+    }
+
+    function randomizeWind() {
+        // Random wind between -50 and 50
+        wind = (Math.random() * 100) - 50;
+        const arrow = document.getElementById('wind-arrow');
+        const val = document.getElementById('wind-value');
+
+        val.innerText = Math.abs(Math.floor(wind));
+        arrow.innerHTML = wind > 0 ? "&rarr;" : "&larr;";
+
+        // Visual indicator scaling
+        arrow.style.transform = `scale(${1 + Math.abs(wind)/50})`;
+    }
+
+    function draw() {
+        // Clear Sky
+        ctx.fillStyle = "#0000AA";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw Sun (classic yellow smiley face simplified)
+        ctx.fillStyle = "#FFFF55";
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, 40, 20, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw Buildings
+        buildings.forEach(b => {
+            ctx.fillStyle = b.c;
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+
+            // Windows effect
+            ctx.fillStyle = "#111";
+            for(let wx = b.x + 10; wx < b.x + b.w - 10; wx+=15) {
+                for(let wy = b.y + 10; wy < canvas.height - 10; wy+=20) {
+                     if(Math.random() > 0.2) ctx.fillRect(wx, wy, 8, 12);
+                }
+            }
+        });
+
+        // Draw Gorillas
+        drawGorilla(player1.x, player1.y);
+        drawGorilla(player2.x, player2.y);
+
+        // Draw Banana
+        if (banana) {
+            ctx.fillStyle = "#FFFF00";
+            ctx.beginPath();
+            ctx.arc(banana.x, banana.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawGorilla(x, y) {
+        ctx.fillStyle = "#FFD700"; // Light brown/gold
+        // Body
+        ctx.fillRect(x + 5, y + 10, 20, 20);
+        // Head
+        ctx.fillRect(x + 10, y, 10, 10);
+        // Arms (simple lines for retro look)
+        ctx.fillStyle = "#FFAA00";
+        ctx.fillRect(x, y + 10, 5, 15);
+        ctx.fillRect(x + 25, y + 10, 5, 15);
+    }
+
+    function fireBanana() {
+        if (isAnimating) return;
+
+        const angleInput = parseFloat(document.getElementById('angle').value);
+        const velocityInput = parseFloat(document.getElementById('velocity').value);
+
+        const activePlayer = currentPlayer === 1 ? player1 : player2;
+
+        // Convert angle to radians.
+        // Note: Mathematical 0 is right (3 o'clock).
+        // If Player 1 (Left) throws, 45 deg is Up-Right.
+        // If Player 2 (Right) throws, we need to flip the angle logic (135 deg is Up-Left).
+
+        let theta;
+        if (currentPlayer === 1) {
+            theta = -angleInput * (Math.PI / 180); // Negative because Canvas Y is down
+        } else {
+            theta = -(180 - angleInput) * (Math.PI / 180);
+        }
+
+        // Initial positions
+        // Start slightly above the gorilla's head
+        banana = {
+            x: activePlayer.x + 15,
+            y: activePlayer.y - 10,
+            vx: Math.cos(theta) * velocityInput * 1.5, // 1.5 multiplier to make feel better on this canvas scale
+            vy: Math.sin(theta) * velocityInput * 1.5
+        };
+
+        isAnimating = true;
+        document.getElementById('fire-btn').disabled = true;
+        requestAnimationFrame(gameLoop);
+    }
+
+    function gameLoop() {
+        if (!banana) return;
+
+        // Clear only for redraw efficiency or just redraw everything
+        // For simplicity, we redraw whole scene
+        draw();
+
+        // Physics Update
+        // Apply Wind to X velocity (small factor)
+        banana.vx += wind * 0.01;
+        // Apply Gravity to Y velocity
+        banana.vy += GRAVITY * 0.05;
+
+        // Move
+        banana.x += banana.vx * 0.1;
+        banana.y += banana.vy * 0.1;
+
+        // Collision Detection
+
+        // 1. Hit Ground/Building
+        if (banana.y > canvas.height) {
+            endTurn();
+            return;
+        }
+
+        // Check building collision
+        for (let b of buildings) {
+            if (banana.x > b.x && banana.x < b.x + b.w && banana.y > b.y) {
+                createExplosion(banana.x, banana.y);
+                // "Destroy" part of building (simple visual trick)
+                // We won't deform geometry for this simple version, but we stop the banana
+                endTurn();
+                return;
+            }
+        }
+
+        // 2. Out of bounds (left/right)
+        if (banana.x < 0 || banana.x > canvas.width) {
+            endTurn();
+            return;
+        }
+
+        // 3. Hit Player
+        if (checkHit(player1)) {
+            handleWin(2);
+            return;
+        }
+        if (checkHit(player2)) {
+            handleWin(1);
+            return;
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function checkHit(p) {
+        // Simple AABB collision
+        return (banana.x > p.x && banana.x < p.x + p.width &&
+                banana.y > p.y && banana.y < p.y + p.height);
+    }
+
+    function createExplosion(x, y) {
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.arc(x, y, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "orange";
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function handleWin(winnerNum) {
+        createExplosion(banana.x, banana.y);
+
+        const msg = document.getElementById('message-area');
+        msg.style.display = 'block';
+        msg.innerText = `PLAYER ${winnerNum} WINS!`;
+        msg.style.color = winnerNum === 1 ? '#55FF55' : '#FF5555';
+
+        if (winnerNum === 1) player1.score++;
+        else player2.score++;
+
+        updateUI();
+        isAnimating = false;
+        banana = null;
+
+        setTimeout(() => {
+            msg.style.display = 'none';
+            resetRound();
+        }, 3000);
+    }
+
+    function endTurn() {
+        banana = null;
+        isAnimating = false;
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+        randomizeWind(); // New wind every turn
+        updateUI();
+        document.getElementById('fire-btn').disabled = false;
+        draw();
+    }
+
+    function updateUI() {
+        document.getElementById('p1-score').innerText = `Player 1: ${player1.score}`;
+        document.getElementById('p2-score').innerText = `Player 2: ${player2.score}`;
+
+        const turnInd = document.getElementById('turn-indicator');
+        turnInd.innerText = `Player ${currentPlayer}'s Turn`;
+        turnInd.style.color = currentPlayer === 1 ? '#FF5555' : '#5555FF';
+
+        // Reset inputs to default for easier aiming?
+        // Or keep them same as previous turn? keeping them is usually better for adjustments.
+        document.getElementById('fire-btn').disabled = false;
+    }
+
+    function resetRound() {
+        init(); // Regenerate city and reset positions
+    }
+
+    function resetGame() {
+        player1.score = 0;
+        player2.score = 0;
+        currentPlayer = 1;
+        init();
+    }
+
+    // Start
+    init();
+</script>
+</body>
+</html>
