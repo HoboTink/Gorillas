@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gorillas Office - 2D Side-Scroller</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        #game-container {
+            position: relative;
+            border: 2px solid #4CAF50;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            display: block;
+            background-color: #e8e8e8;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .score-box {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 2px solid #FF6B6B;
+            font-weight: bold;
+        }
+
+        #wind-display {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 2px solid #FFD700;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        #message-area {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+            display: none;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px 50px;
+            border-radius: 10px;
+            border: 3px solid #FFD700;
+            z-index: 100;
+        }
+
+        #controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: #222;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        input, select {
+            background: #333;
+            border: 1px solid #555;
+            color: #4CAF50;
+            padding: 8px 10px;
+            width: 80px;
+            font-family: inherit;
+            font-weight: bold;
+        }
+
+        select {
+            width: auto;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+
+        button {
+            background: linear-gradient(135deg, #FF6B6B, #FF5252);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #FF5252, #FF3838);
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.5);
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        #turn-indicator {
+            color: #fff;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .control-label {
+            color: #fff;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🦍 GORILLAS OFFICE EDITION 🏢</h1>
+    <p style="margin-bottom: 20px; color: #aaa;">2D Side-Scroller - Workplace Chaos!</p>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="1000" height="600"></canvas>
+        <div id="ui-layer">
+            <div class="score-box" id="p1-score">Gorilla 1: 0</div>
+            <div id="wind-display">Air Flow: <span id="wind-value">0</span></div>
+            <div id="ammo-display" style="background: rgba(0, 0, 0, 0.7); padding: 10px 15px; border-radius: 5px; border: 2px solid #4CAF50; color: #4CAF50; font-weight: bold;">
+                Ammo: <span id="ammo-name">Sticky Notes</span>
+            </div>
+            <div class="score-box" id="p2-score">Gorilla 2: 0</div>
+        </div>
+        <div id="message-area">Player 1 Wins!</div>
+    </div>
+
+    <div id="controls">
+        <span id="turn-indicator" style="color: #FF6B6B;">Gorilla 1's Turn</span>
+        <label class="control-label">Angle:</label>
+        <input type="number" id="angle" value="45" min="0" max="180">
+
+        <label class="control-label">Power:</label>
+        <input type="number" id="velocity" value="60" min="10" max="200">
+
+        <label class="control-label">Ammo:</label>
+        <select id="ammo-select">
+            <option value="sticky">Sticky Notes</option>
+            <option value="stapler">Stapler</option>
+            <option value="paper">Paper Airplane</option>
+        </select>
+
+        <button id="fire-btn" onclick="fireBanana()">THROW!</button>
+        <button onclick="resetGame()">NEW GAME</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Projectile types with different physics
+        const projectileTypes = {
+            sticky: {
+                name: 'Sticky Notes',
+                color: '#FFFF00',
+                mass: 0.5,
+                size: 6,
+                windMult: 1.5,
+                damage: 10
+            },
+            stapler: {
+                name: 'Stapler',
+                color: '#333333',
+                mass: 2.0,
+                size: 8,
+                windMult: 0.3,
+                damage: 50
+            },
+            paper: {
+                name: 'Paper Airplane',
+                color: '#FFFFFF',
+                mass: 0.2,
+                size: 5,
+                windMult: 2.0,
+                damage: 5
+            }
+        };
+
+        // Game State
+        let furniture = [];
+        let gorilla1 = { x: 100, y: 0, width: 30, height: 40, color: '#8B4513', score: 0 };
+        let gorilla2 = { x: 900, y: 0, width: 30, height: 40, color: '#8B4513', score: 0 };
+        let currentPlayer = 1;
+        let wind = 0;
+        let isAnimating = false;
+        let projectile = null;
+        let currentAmmo = 'sticky';
+
+        // Physics Constants
+        const GRAVITY = 9.8;
+        const GROUND_Y = 500;
+
+        // Furniture types
+        class Desk {
+            constructor(x) {
+                this.x = x;
+                this.y = GROUND_Y - 30;
+                this.width = 60;
+                this.height = 30;
+                this.color = '#8B6F47';
+                this.health = 100;
+            }
+
+            draw() {
+                // Desktop
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Legs
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(this.x + 5, this.y + this.height, 8, 20);
+                ctx.fillRect(this.x + this.width - 13, this.y + this.height, 8, 20);
+
+                // Damage indicator
+                if (this.health < 100) {
+                    ctx.strokeStyle = '#FF0000';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(this.x, this.y - 10, this.width * (this.health / 100), 5);
+                }
+            }
+
+            takeDamage(damage) {
+                this.health = Math.max(0, this.health - damage);
+            }
+        }
+
+        class Cabinet {
+            constructor(x) {
+                this.x = x;
+                this.y = GROUND_Y - 60;
+                this.width = 40;
+                this.height = 60;
+                this.color = '#556B2F';
+                this.health = 100;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Damage indicator
+                if (this.health < 100) {
+                    ctx.strokeStyle = '#FF0000';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(this.x, this.y - 10, this.width * (this.health / 100), 5);
+                }
+            }
+
+            takeDamage(damage) {
+                this.health = Math.max(0, this.health - damage);
+            }
+        }
+
+        // Initialize
+        function init() {
+            generateOffice();
+            placeGorillas();
+            randomizeWind();
+            updateUI();
+            draw();
+        }
+
+        function generateOffice() {
+            furniture = [];
+
+            // Create scattered desks
+            for (let i = 0; i < 6; i++) {
+                const x = 150 + i * 130;
+                if (x < 900) {
+                    furniture.push(new Desk(x));
+                }
+            }
+
+            // Create cabinets
+            for (let i = 0; i < 4; i++) {
+                const x = 100 + i * 220;
+                if (x < 950) {
+                    furniture.push(new Cabinet(x));
+                }
+            }
+        }
+
+        function placeGorillas() {
+            gorilla1.y = GROUND_Y - gorilla1.height;
+            gorilla2.y = GROUND_Y - gorilla2.height;
+        }
+
+        function randomizeWind() {
+            wind = (Math.random() - 0.5) * 100;
+            document.getElementById('wind-value').textContent = Math.abs(Math.floor(wind));
+        }
+
+        function updateUI() {
+            document.getElementById('p1-score').textContent = `Gorilla 1: ${gorilla1.score}`;
+            document.getElementById('p2-score').textContent = `Gorilla 2: ${gorilla2.score}`;
+
+            const turnInd = document.getElementById('turn-indicator');
+            turnInd.textContent = `Gorilla ${currentPlayer}'s Turn`;
+            turnInd.style.color = currentPlayer === 1 ? '#FF6B6B' : '#4488FF';
+
+            const ammoName = projectileTypes[currentAmmo].name;
+            document.getElementById('ammo-name').textContent = ammoName;
+            document.getElementById('ammo-select').value = currentAmmo;
+        }
+
+        function draw() {
+            // Clear canvas - office floor
+            ctx.fillStyle = '#e8e8e8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw ceiling
+            ctx.fillStyle = '#d0d0d0';
+            ctx.fillRect(0, 0, canvas.width, 30);
+
+            // Draw ground
+            ctx.fillStyle = '#999999';
+            ctx.fillRect(0, GROUND_Y + 40, canvas.width, 60);
+
+            // Draw furniture
+            furniture.forEach(f => f.draw());
+
+            // Draw gorillas
+            drawGorilla(gorilla1.x, gorilla1.y);
+            drawGorilla(gorilla2.x, gorilla2.y);
+
+            // Draw projectile
+            if (projectile) {
+                const projType = projectileTypes[projectile.type];
+                ctx.fillStyle = projType.color;
+                ctx.beginPath();
+                ctx.arc(projectile.x, projectile.y, projType.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Add trail effect
+                ctx.strokeStyle = projType.color;
+                ctx.globalAlpha = 0.3;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(projectile.x, projectile.y);
+                ctx.lineTo(projectile.x - projectile.vx * 0.1, projectile.y - projectile.vy * 0.1);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function drawGorilla(x, y) {
+            // Body
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(x + 5, y + 10, 20, 20);
+
+            // Head
+            ctx.beginPath();
+            ctx.arc(x + 15, y + 8, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(x + 12, y + 6, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 18, y + 6, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Arms
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(x + 5, y + 15);
+            ctx.lineTo(x - 5, y + 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + 25, y + 15);
+            ctx.lineTo(x + 35, y + 20);
+            ctx.stroke();
+
+            // Legs
+            ctx.fillRect(x + 8, y + 30, 4, 10);
+            ctx.fillRect(x + 18, y + 30, 4, 10);
+        }
+
+        function fireBanana() {
+            if (isAnimating) return;
+
+            const angle = parseFloat(document.getElementById('angle').value);
+            const velocity = parseFloat(document.getElementById('velocity').value);
+            const activeGorilla = currentPlayer === 1 ? gorilla1 : gorilla2;
+
+            // Convert angle for side-scroller
+            let theta;
+            if (currentPlayer === 1) {
+                theta = -angle * (Math.PI / 180); // Throwing right
+            } else {
+                theta = -(180 - angle) * (Math.PI / 180); // Throwing left
+            }
+
+            projectile = {
+                type: currentAmmo,
+                x: activeGorilla.x + activeGorilla.width / 2,
+                y: activeGorilla.y + 10,
+                vx: Math.cos(theta) * velocity * 1.2,
+                vy: Math.sin(theta) * velocity * 1.2,
+                mass: projectileTypes[currentAmmo].mass
+            };
+
+            isAnimating = true;
+            document.getElementById('fire-btn').disabled = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop() {
+            if (!projectile) return;
+
+            draw();
+
+            // Physics Update
+            const projType = projectileTypes[projectile.type];
+
+            // Apply wind with multiplier
+            projectile.vx += (wind * 0.01 * projType.windMult);
+
+            // Apply gravity with mass
+            projectile.vy += GRAVITY * 0.05 * projType.mass;
+
+            // Move projectile
+            projectile.x += projectile.vx * 0.1;
+            projectile.y += projectile.vy * 0.1;
+
+            // Check bounds
+            if (projectile.y > canvas.height || projectile.x < 0 || projectile.x > canvas.width) {
+                endTurn();
+                return;
+            }
+
+            // Check furniture collision
+            for (let f of furniture) {
+                if (projectile.x > f.x && projectile.x < f.x + f.width &&
+                    projectile.y > f.y && projectile.y < f.y + f.height) {
+
+                    createExplosion(projectile.x, projectile.y);
+                    f.takeDamage(projType.damage);
+                    endTurn();
+                    return;
+                }
+            }
+
+            // Check gorilla collision
+            if (currentPlayer === 1 && checkGorillaHit(projectile, gorilla2)) {
+                createExplosion(projectile.x, projectile.y);
+                handleWin(1);
+                return;
+            }
+            if (currentPlayer === 2 && checkGorillaHit(projectile, gorilla1)) {
+                createExplosion(projectile.x, projectile.y);
+                handleWin(2);
+                return;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function checkGorillaHit(proj, gorilla) {
+            return proj.x > gorilla.x && proj.x < gorilla.x + gorilla.width &&
+                   proj.y > gorilla.y && proj.y < gorilla.y + gorilla.height;
+        }
+
+        function createExplosion(x, y) {
+            const particleCount = 15;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (Math.PI * 2 * i) / particleCount;
+                const speed = 100 + Math.random() * 50;
+                const particle = {
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 500,
+                    age: 0,
+                    color: ['#FF4444', '#FFAA00', '#FFFF00'][Math.floor(Math.random() * 3)]
+                };
+
+                const animateParticle = () => {
+                    const elapsed = Date.now();
+                    particle.age = (elapsed - particle.startTime) || 0;
+                    particle.startTime = elapsed;
+
+                    if (particle.age > particle.life) return;
+
+                    particle.vy += 100 * 0.016; // gravity
+                    particle.x += particle.vx * 0.016;
+                    particle.y += particle.vy * 0.016;
+
+                    const progress = particle.age / particle.life;
+                    ctx.fillStyle = particle.color;
+                    ctx.globalAlpha = 1 - progress;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+
+                    requestAnimationFrame(animateParticle);
+                };
+
+                particle.startTime = Date.now();
+                animateParticle();
+            }
+        }
+
+        function handleWin(winner) {
+            if (winner === 1) gorilla1.score++;
+            else gorilla2.score++;
+
+            const msg = document.getElementById('message-area');
+            msg.style.display = 'block';
+            msg.innerText = `GORILLA ${winner} WINS!`;
+            msg.style.color = winner === 1 ? '#4CAF50' : '#4488FF';
+
+            updateUI();
+            isAnimating = false;
+            projectile = null;
+
+            setTimeout(() => {
+                msg.style.display = 'none';
+                resetRound();
+            }, 3000);
+        }
+
+        function endTurn() {
+            projectile = null;
+            isAnimating = false;
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            randomizeWind();
+            updateUI();
+            document.getElementById('fire-btn').disabled = false;
+            draw();
+        }
+
+        function resetRound() {
+            generateOffice();
+            placeGorillas();
+            randomizeWind();
+            updateUI();
+            draw();
+        }
+
+        function resetGame() {
+            gorilla1.score = 0;
+            gorilla2.score = 0;
+            currentPlayer = 1;
+            currentAmmo = 'sticky';
+            resetRound();
+        }
+
+        // Event listeners
+        document.getElementById('ammo-select').addEventListener('change', (e) => {
+            currentAmmo = e.target.value;
+        });
+
+        // Start game
+        init();
+    </script>
+</body>
+</html>
