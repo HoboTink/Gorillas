@@ -437,23 +437,64 @@
                 const colors = [0xff4444, 0x44ccff, 0x4444ff, 0xffaa44, 0x44ff44];
                 const color = colors[Math.floor(Math.random() * colors.length)];
 
-                const geometry = new THREE.BoxGeometry(width, height, 30);
-                const material = new THREE.MeshStandardMaterial({
+                // Create a group to hold destructible segments
+                const buildingGroup = new THREE.Group();
+                buildingGroup.position.set(x, height / 2 - 50, 0);
+                buildingGroup.userData = {
                     color: color,
-                    roughness: 0.6,
-                    metalness: 0.1
-                });
-                const building = new THREE.Mesh(geometry, material);
-                // Buildings sit on the ground (y = 0), so position at height/2 above ground
-                building.position.set(x, height / 2 - 50, 0);
-                building.castShadow = true;
-                building.receiveShadow = true;
+                    width: width,
+                    height: height,
+                    segments: [],
+                    bounds: { minX: -width / 2, maxX: width / 2, minY: -height / 2, maxY: height / 2, minZ: -15, maxZ: 15 }
+                };
 
-                // Add windows
-                this.addWindowsToBuilding(building, width, height);
+                // Create segments (3D building blocks)
+                const segmentSize = 10;
+                const segsX = Math.ceil(width / segmentSize);
+                const segsY = Math.ceil(height / segmentSize);
+                const segsZ = 3; // Depth segments
 
-                this.scene.add(building);
-                return building;
+                for (let sy = 0; sy < segsY; sy++) {
+                    for (let sx = 0; sx < segsX; sx++) {
+                        for (let sz = 0; sz < segsZ; sz++) {
+                            const segWidth = (sx === segsX - 1) ? width - sx * segmentSize : segmentSize;
+                            const segHeight = (sy === segsY - 1) ? height - sy * segmentSize : segmentSize;
+                            const segDepth = 10;
+
+                            const geometry = new THREE.BoxGeometry(segWidth, segHeight, segDepth);
+                            const material = new THREE.MeshStandardMaterial({
+                                color: color,
+                                roughness: 0.6,
+                                metalness: 0.1
+                            });
+                            const segment = new THREE.Mesh(geometry, material);
+                            segment.castShadow = true;
+                            segment.receiveShadow = true;
+
+                            // Position segment relative to building group
+                            segment.position.set(
+                                -width / 2 + sx * segmentSize + segWidth / 2,
+                                -height / 2 + sy * segmentSize + segHeight / 2,
+                                -15 + sz * segDepth
+                            );
+
+                            buildingGroup.add(segment);
+                            buildingGroup.userData.segments.push({
+                                mesh: segment,
+                                intact: true,
+                                sx: sx,
+                                sy: sy,
+                                sz: sz
+                            });
+                        }
+                    }
+                }
+
+                // Add windows (optional - using random scattered windows)
+                this.addWindowsToBuilding(buildingGroup, width, height);
+
+                this.scene.add(buildingGroup);
+                return buildingGroup;
             }
 
             addWindowsToBuilding(building, width, height) {
@@ -598,7 +639,7 @@
             onScroll(e) {
                 e.preventDefault();
                 this.cameraControl.zoom += e.deltaY * 0.1;
-                this.cameraControl.zoom = Math.max(30, Math.min(300, this.cameraControl.zoom));
+                this.cameraControl.zoom = Math.max(30, Math.min(500, this.cameraControl.zoom));
                 this.updateCameraPosition();
             }
 
@@ -745,6 +786,7 @@
                 for (let building of this.buildings) {
                     if (this.checkBuildingCollision(b.position, building)) {
                         this.createExplosion(b.position);
+                        this.destroyBuildingSegments(b.position, building);
                         this.endTurn();
                         return;
                     }
@@ -763,18 +805,35 @@
 
             checkBuildingCollision(pos, building) {
                 const bPos = building.position;
-                const bScale = building.scale;
-                const bGeom = building.geometry;
-                const bSizeX = bGeom.parameters.width * bScale.x;
-                const bSizeY = bGeom.parameters.height * bScale.y;
-                const bSizeZ = bGeom.parameters.depth * bScale.z;
+                const bounds = building.userData.bounds;
 
-                return pos.x > bPos.x - bSizeX / 2 &&
-                       pos.x < bPos.x + bSizeX / 2 &&
-                       pos.y > bPos.y - bSizeY / 2 &&
-                       pos.y < bPos.y + bSizeY / 2 &&
-                       pos.z > bPos.z - bSizeZ / 2 &&
-                       pos.z < bPos.z + bSizeZ / 2;
+                return pos.x > bPos.x + bounds.minX &&
+                       pos.x < bPos.x + bounds.maxX &&
+                       pos.y > bPos.y + bounds.minY &&
+                       pos.y < bPos.y + bounds.maxY &&
+                       pos.z > bPos.z + bounds.minZ &&
+                       pos.z < bPos.z + bounds.maxZ;
+            }
+
+            destroyBuildingSegments(impactPos, building) {
+                const destructionRadius = 25;
+                const buildingWorldPos = building.position;
+
+                building.userData.segments.forEach(segment => {
+                    if (!segment.intact) return;
+
+                    // Get world position of segment
+                    const segmentWorldPos = new THREE.Vector3();
+                    segment.mesh.getWorldPosition(segmentWorldPos);
+
+                    // Calculate distance from impact
+                    const distance = impactPos.distanceTo(segmentWorldPos);
+
+                    if (distance < destructionRadius) {
+                        segment.intact = false;
+                        building.remove(segment.mesh);
+                    }
+                });
             }
 
             checkGorilllaCollision(pos, gorilla) {

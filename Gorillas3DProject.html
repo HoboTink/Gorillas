@@ -118,6 +118,10 @@
     let isAnimating = false;
     let banana = null;
 
+    // Destruction constants
+    const SEGMENT_SIZE = 10; // 10x10 pixel segments for destruction
+    const DESTRUCTION_RADIUS = 25; // Radius of banana impact
+
     // Physics Constants
     const GRAVITY = 9.8;
 
@@ -145,7 +149,20 @@
                 width = canvas.width - currentX;
             }
 
-            buildings.push({ x: currentX, y: canvas.height - height, w: width, h: height, c: color });
+            // Create building with segment tracking
+            let building = { x: currentX, y: canvas.height - height, w: width, h: height, c: color };
+
+            // Initialize segments as intact (true = not destroyed)
+            let segmentsX = Math.ceil(width / SEGMENT_SIZE);
+            let segmentsY = Math.ceil(height / SEGMENT_SIZE);
+            building.segments = [];
+            for (let sy = 0; sy < segmentsY; sy++) {
+                for (let sx = 0; sx < segmentsX; sx++) {
+                    building.segments.push({ x: sx, y: sy, intact: true });
+                }
+            }
+
+            buildings.push(building);
             currentX += width;
         }
     }
@@ -188,18 +205,23 @@
         ctx.arc(canvas.width / 2, 40, 20, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw Buildings
+        // Draw Buildings (with destruction)
         buildings.forEach(b => {
-            ctx.fillStyle = b.c;
-            ctx.fillRect(b.x, b.y, b.w, b.h);
+            // Draw intact segments
+            b.segments.forEach(seg => {
+                if (seg.intact) {
+                    ctx.fillStyle = b.c;
+                    let segX = b.x + seg.x * SEGMENT_SIZE;
+                    let segY = b.y + seg.y * SEGMENT_SIZE;
+                    ctx.fillRect(segX, segY, SEGMENT_SIZE, SEGMENT_SIZE);
 
-            // Windows effect
-            ctx.fillStyle = "#111";
-            for(let wx = b.x + 10; wx < b.x + b.w - 10; wx+=15) {
-                for(let wy = b.y + 10; wy < canvas.height - 10; wy+=20) {
-                     if(Math.random() > 0.2) ctx.fillRect(wx, wy, 8, 12);
+                    // Window effect for larger segments
+                    if (SEGMENT_SIZE >= 10) {
+                        ctx.fillStyle = "#111";
+                        ctx.fillRect(segX + 2, segY + 2, 4, 6);
+                    }
                 }
-            }
+            });
         });
 
         // Draw Gorillas
@@ -290,8 +312,8 @@
         for (let b of buildings) {
             if (banana.x > b.x && banana.x < b.x + b.w && banana.y > b.y) {
                 createExplosion(banana.x, banana.y);
-                // "Destroy" part of building (simple visual trick)
-                // We won't deform geometry for this simple version, but we stop the banana
+                // Destroy building segments in impact radius
+                destroyBuildingSegments(banana.x, banana.y);
                 endTurn();
                 return;
             }
@@ -320,6 +342,28 @@
         // Simple AABB collision
         return (banana.x > p.x && banana.x < p.x + p.width &&
                 banana.y > p.y && banana.y < p.y + p.height);
+    }
+
+    function destroyBuildingSegments(impactX, impactY) {
+        // Destroy building segments within DESTRUCTION_RADIUS
+        for (let building of buildings) {
+            for (let segment of building.segments) {
+                if (segment.intact) {
+                    // Calculate segment center
+                    let segCenterX = building.x + segment.x * SEGMENT_SIZE + SEGMENT_SIZE / 2;
+                    let segCenterY = building.y + segment.y * SEGMENT_SIZE + SEGMENT_SIZE / 2;
+
+                    // Check distance from impact point
+                    let dx = segCenterX - impactX;
+                    let dy = segCenterY - impactY;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < DESTRUCTION_RADIUS) {
+                        segment.intact = false;
+                    }
+                }
+            }
+        }
     }
 
     function createExplosion(x, y) {
