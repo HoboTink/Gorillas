@@ -46,7 +46,7 @@
 
         .versions-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 30px;
             margin-bottom: 40px;
         }
@@ -225,9 +225,25 @@
                     <li>Dynamic lighting and shadows</li>
                     <li>Particle explosion effects</li>
                     <li>Advanced physics simulation</li>
-                    <li>Modern UI with animations</li>
+                    <li>Destructible buildings</li>
                 </ul>
                 <a href="Gorillas3D.html" class="play-button">Play 3D Version</a>
+            </div>
+
+            <!-- Office Edition -->
+            <div class="version-card">
+                <span class="badge" style="background: #E91E63;">Fun</span>
+                <h2>Office Edition</h2>
+                <p>Workplace chaos! Gorillas throw sticky notes, staplers, and paper airplanes in an office setting with destructible furniture and multiple projectile physics.</p>
+                <ul class="features">
+                    <li>Indoor office environment</li>
+                    <li>Multiple projectile types</li>
+                    <li>Different physics per object</li>
+                    <li>Destructible office furniture</li>
+                    <li>Random gorilla spawning</li>
+                    <li>Hilarious office combat</li>
+                </ul>
+                <a href="Gorillas3DOffice.html" class="play-button" style="background: linear-gradient(135deg, #E91E63, #C2185B);">Play Office Edition</a>
             </div>
 
             <!-- 2D Version -->
